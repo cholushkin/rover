@@ -16,10 +16,16 @@ RoverVehicle                           (Rigidbody, main collider, VehicleControl
 │   ├── Hull_Mesh                       (MeshRenderer/SkinnedMeshRenderer)
 │   ├── Wing_Left                       (toggled by WingDeploymentView)
 │   ├── Wing_Right
-│   └── VehicleVisualController         (component on this node)
+│   ├── BallastFairing_Left             (toggled/animated by SubmarineTransformView)
+│   ├── BallastFairing_Right
+│   ├── Headlight_Left                  (Light, enabled via DepthBelowSurface threshold)
+│   ├── Headlight_Right
+│   ├── VehicleVisualController         (component on this node)
+│   └── SubmarineTransformView          (component on this node; watches IsTransforming)
 ├── VFX/
 │   ├── HoverThrusters                  (ParticleSystem × N, HoverThrusterVfxView)
-│   └── WakeTrail                       (TrailRenderer/ParticleSystem, WakeTrailView)
+│   ├── WakeTrail                       (TrailRenderer/ParticleSystem, WakeTrailView)
+│   └── BubbleTrail                     (ParticleSystem, BubbleTrailView — active only in UnderWater)
 ├── Audio/
 │   └── EngineAudioSource                (AudioSource, VehicleAudioController)
 ├── CameraTarget                         (empty Transform; follow-camera rig parents to THIS, never to the Rigidbody root)
@@ -34,9 +40,10 @@ RoverVehicle                           (Rigidbody, main collider, VehicleControl
 | `RoverVehicle` (root) | `Rigidbody`, 1 primary `Collider` (convex), `VehicleController` | Single physics body for the whole vehicle. Keep the collider count minimal — one convex hull or a small compound of 2–3 primitives, never a mesh collider on the live rigidbody. |
 | `Probes/Probe_*` | none (bare `Transform`) | Positions read by `VehicleController` into the `_suspensionProbePoints` array (doc 02). No `Collider`, no script — they're just raycast origins. Place at the four lowest/outer corners of the hull in local space. |
 | `BuoyancyPoints/Buoyancy_*` | none (bare `Transform`) | Same pattern for `_buoyancySamplePoints`. Bow + stern is the minimum for pitch stability; add left/right pairs later only if roll-while-floating turns out to need it. |
-| `Visuals/*` | `MeshRenderer`, `VehicleVisualController` | Entirely decorative. `VehicleVisualController` subscribes to `VehicleController.Telemetry`; it never reads `Rigidbody` or `Transform` of the physics root beyond the implicit parent-transform follow. |
+| `Visuals/*` | `MeshRenderer`, `VehicleVisualController`, `SubmarineTransformView` | Entirely decorative. `VehicleVisualController` subscribes to `VehicleController.Telemetry`; it never reads `Rigidbody` or `Transform` of the physics root beyond the implicit parent-transform follow. `SubmarineTransformView` plays the ballast-fairing open/close animation while `IsTransforming` is true and toggles `Headlight_*` based on `DepthBelowSurface` crossing `UnderWaterModeConfig.HeadlightActivationDepth`. |
 | `VFX/HoverThrusters` | `ParticleSystem`, `HoverThrusterVfxView` | Emission rate driven by `SuspensionCompression01`/current state id from telemetry. |
 | `VFX/WakeTrail` | `TrailRenderer` or `ParticleSystem`, `WakeTrailView` | Enabled only while `StateId == Water` and `SubmersionFraction01` is near the surface threshold. |
+| `VFX/BubbleTrail` | `ParticleSystem`, `BubbleTrailView` | Enabled only while `StateId == UnderWater`; emission rate can scale with `Speed` for a thruster-wash look. |
 | `Audio/EngineAudioSource` | `AudioSource`, `VehicleAudioController` | Pitch/volume mapped from `Speed`/`StateId`. |
 | `CameraTarget` | none (bare `Transform`) | A follow/orbit camera rig should target this, not the Rigidbody transform directly, so camera smoothing logic stays independent of physics-step jitter. |
 | `Debug/RoverDebugGizmos` | `MonoBehaviour` with only `OnDrawGizmosSelected` | Draws suspension rays (color-coded by compression), buoyancy sample points, and the current lift vector. Lives in `Assets/Game/Debug/` per `ProjectConvention.md`'s `Debug/` folder, excluded from release builds via a `UNITY_EDITOR` guard or by living in an editor-only asmdef. |
@@ -47,6 +54,10 @@ RoverVehicle                           (Rigidbody, main collider, VehicleControl
 - **Visuals never carry colliders.** Keeping `Visuals/` fully collider-free is what guarantees "decoupled physics and presentation" isn't just a code-level claim — a designer can swap the entire visual mesh for a different rover skin without touching physics behavior at all.
 - **Probe/buoyancy anchors are not colliders.** They're pure `Transform` markers consumed by `IEnvironmentProbe` calls originating from the root — giving them colliders would make them participate in physics queries themselves, which is never wanted.
 - **Liquid detection is the ocean system's responsibility, not the rover's.** The planet/ocean system owns trigger volumes (or an analytic height function) on a dedicated liquid `LayerMask`; `RaycastEnvironmentProbe.SampleLiquid` queries *that*. The rover prefab should contain zero water-specific colliders.
+
+## Submarine mode reuses existing anchors — no new scene objects
+
+`UnderWaterState`'s seafloor/cave-wall probing (doc 03) reuses the same `Probes/Probe_*` transforms already placed for `HoverState` — it just casts them forward and down instead of only down, and only while `UnderWater` is active. There is no separate "sonar probe" object to add to the hierarchy. Likewise, `IOceanHeightProvider` is implemented and owned by the planet/ocean system elsewhere in the scene (likely a scene-level singleton or service locator entry, not a child of `RoverVehicle`) — `VehicleController.Awake()` resolves it (doc 02), it doesn't live under this prefab.
 
 ## Probe count & placement rationale
 

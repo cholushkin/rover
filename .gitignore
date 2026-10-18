@@ -20,3 +20,6 @@
 /Unity/Game/obj
 /Unity/Game/.idea
 /Builds
+/Unity/Game/RMVVM.csproj
+/Unity/Game/VersionHistory.Editor.csproj
+/Unity/Game/VersionHistoryRuntime.csproj

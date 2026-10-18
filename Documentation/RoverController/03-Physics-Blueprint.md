@@ -38,6 +38,21 @@ public interface IEnvironmentProbe
 
 States never call `Physics.*` directly; they only ever go through `IEnvironmentProbe`. This is what lets terrain/ocean implementation change (procedural mesh colliders today, SDF-based collision later) without touching any vehicle state.
 
+### `IOceanHeightProvider` — global surface height for the submarine
+
+`SampleLiquid`'s raycast has a bounded `maxDistance`, which is fine for `WaterState`'s per-point buoyancy sampling (the surface is always within a meter or two of a floating hull) but wrong for `UnderWaterState`: a submarine cruising deep below the surface still needs to know "how far up is the surface" to compute depth, and a raycast long enough to always reach it would be wasteful and would also hit the seafloor/terrain first if any is in the way. So this is deliberately a *second*, non-raycast interface, owned by the same planet/ocean system that owns the liquid volumes:
+
+```csharp
+namespace Game.Gameplay.Vehicles.Rover.Physics;
+
+public interface IOceanHeightProvider
+{
+    float GetSurfaceHeight(Vector3 worldPositionXZ);
+}
+```
+
+An analytic query (flat plane today, a Gerstner-wave height function later) rather than a physics cast — it never misses, never cares what's in between, and costs nothing per-call. `UnderWaterState` is the only consumer; `WaterState` keeps using `IEnvironmentProbe.SampleLiquid` for its short-range per-point sampling since that already gives it a surface normal for pitch, which `IOceanHeightProvider` deliberately does not (it only answers "how high," not "which way is up here").
+
 ## Hover suspension
 
 ### Per-probe spring-damper
@@ -183,6 +198,67 @@ public readonly struct BuoyancyForceResult
     public readonly float ResolvedDrag;
     public readonly float ResolvedAngularDrag;
     public readonly float ThrustMultiplier;
+}
+```
+
+## Underwater / submarine propulsion
+
+Entered only from `WaterState` (doc 02). Where `FlightState` fights gravity with speed-based lift, `UnderWaterState` cancels gravity outright and replaces it with fully player-directed thrust in all three axes — the vehicle is a submarine, not a glider, once transformed.
+
+### Neutral buoyancy & depth
+
+```text
+rigidbody.useGravity = false   // no custom gravity term either — thrust alone controls vertical motion
+surfaceHeight = oceanHeightProvider.GetSurfaceHeight(transform.position)
+depthBelowSurface = surfaceHeight - transform.position.y   // 0 at the surface, grows positive going down
+crushRatio01 = Saturate(depthBelowSurface / config.MaxDiveDepth)
+```
+
+`depthBelowSurface` is written into `VehicleTelemetrySnapshot.DepthBelowSurface` every `FixedTick` — it's the single value both the `UnderWater → Water` transition guard (doc 02) and any future "hull stress" UI/gameplay hook (`crushRatio01` crossing `config.CrushWarningDepth01`) read from. This plan treats exceeding `MaxDiveDepth` as a designer-facing extension point (slow forced ascent, hull damage, alarm VFX) rather than speccing specific punishment here — wire it up when the gameplay need is concrete.
+
+### Thrust & control
+
+```text
+forwardThrust = transform.forward * (input.Throttle * config.ThrustForce)
+verticalThrust = transform.up * (input.Ascend * config.AscendThrust)   // dedicated ascend/descend axis, not reused from Pitch
+controlTorque = TransformDirection(new Vector3(input.Pitch, input.Yaw, -input.Roll)) * config.ControlTorqueStrength * controlAuthority01
+```
+
+`controlAuthority01` is the same transformation-lockout multiplier from doc 02's `UnderWaterState.FixedTick` (≈0.1 while mid-transform, 1 once settled) — the processor takes it as a parameter rather than reading transform state itself, keeping it a pure function. There is no lift term and no forward-speed dependency: ascend/descend is a direct thrust axis the player holds, which reads as "submarine" rather than "underwater plane."
+
+### Drag & seafloor avoidance
+
+Drag is constant and heavy while in this state (no blending needed — `UnderWaterState` is either fully entered or not, unlike `WaterState`'s partial-submersion blend):
+
+```text
+rigidbody.drag = config.LinearDrag
+rigidbody.angularDrag = config.AngularDrag
+```
+
+For seafloor/cave-wall avoidance, reuse `IEnvironmentProbe.SampleGround` — cast along `transform.forward` and `-transform.up` against the same terrain `LayerMask` already used by `HoverState`. No new probe type is needed; the submarine just points existing ground probes forward/down instead of only down. A hit within a configurable `config.ObstacleWarningDistance` is exposed on telemetry for a sonar-ping VFX/SFX cue rather than an automatic avoidance force — steering around terrain stays the player's job.
+
+### `UnderwaterPropulsionProcessor` shape
+
+```csharp
+public readonly struct SubmarinePropulsionResult
+{
+    public readonly Vector3 Thrust;
+    public readonly Vector3 ControlTorque;
+    public readonly float DepthBelowSurface;
+    public readonly float CrushRatio01;
+    public readonly bool ObstacleAhead;
+}
+
+public sealed class UnderwaterPropulsionProcessor
+{
+    private readonly IOceanHeightProvider _oceanHeight;
+
+    public UnderwaterPropulsionProcessor(IOceanHeightProvider oceanHeight) => _oceanHeight = oceanHeight;
+
+    public SubmarinePropulsionResult Solve(
+        VehicleRuntimeContext context,
+        float controlAuthority01,
+        UnderWaterModeConfig config);
 }
 ```
 

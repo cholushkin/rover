@@ -93,13 +93,43 @@ public sealed class WaterModeConfig : VehicleModeConfig
 }
 ```
 
+## `UnderWaterModeConfig`
+
+```csharp
+[CreateAssetMenu(menuName = "Rover/Configs/UnderWater Mode Config", fileName = "RoverUnderWaterConfig")]
+public sealed class UnderWaterModeConfig : VehicleModeConfig
+{
+    [Header("Propulsion")]
+    [field: SerializeField] public float ThrustForce { get; private set; } = 30f;
+    [field: SerializeField] public float AscendThrust { get; private set; } = 18f;
+    [field: SerializeField] public float ControlTorqueStrength { get; private set; } = 10f;
+    [field: SerializeField] public float AngularDrag { get; private set; } = 4f;
+    [field: SerializeField] public float LinearDrag { get; private set; } = 2.5f;
+
+    [Header("Depth")]
+    [field: SerializeField] public float MaxDiveDepth { get; private set; } = 60f;
+    [field: SerializeField, Range(0f, 1f)] public float CrushWarningDepth01 { get; private set; } = 0.8f;
+    [field: SerializeField] public float ObstacleWarningDistance { get; private set; } = 10f;
+
+    [Header("Transformation")]
+    [field: SerializeField] public float TransformDuration { get; private set; } = 1.2f;
+    [field: SerializeField] public float SurfaceEmergeThreshold { get; private set; } = 0.5f;
+
+    [Header("Presentation Thresholds")]
+    [field: SerializeField] public float HeadlightActivationDepth { get; private set; } = 8f;
+}
+```
+
+`SurfaceEmergeThreshold` is deliberately a shallower depth than `WaterModeConfig.FullySubmergedDepth` would suggest for a *floating* hull — it only needs to be shallow enough that the transformation animation back to a surface hull reads correctly, not literally at the water line. Tune the two independently; they protect different transitions (doc 02).
+
 ## Asset layout
 
 ```text
 Assets/Game/DataAndSettings/Vehicles/Rover/
 ├── RoverHoverConfig.asset
 ├── RoverFlightConfig.asset
-└── RoverWaterConfig.asset
+├── RoverWaterConfig.asset
+└── RoverUnderWaterConfig.asset
 ```
 
 Mirrors the existing `DataAndSettings/Input/` and `DataAndSettings/Render/` convention already in the project. `VehicleController` references the three assets directly as serialized fields (see doc 02's `VehicleController` listing) — no runtime lookup or Addressables indirection needed for something this small and always-loaded.
@@ -115,6 +145,7 @@ public sealed class VehicleProfile : ScriptableObject
     [field: SerializeField] public HoverModeConfig Hover { get; private set; }
     [field: SerializeField] public FlightModeConfig Flight { get; private set; }
     [field: SerializeField] public WaterModeConfig Water { get; private set; }
+    [field: SerializeField] public UnderWaterModeConfig UnderWater { get; private set; }
 }
 ```
 
