@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a1e6b5589674e6f90f9b1924f07e0fb, type: 3}
   m_Name: RoverHoverConfig
   m_EditorClassIdentifier: 
-  <DisplayName>k__BackingField: 
+  <DisplayName>k__BackingField: HoverCfg
   <RestLength>k__BackingField: 1.2
   <SpringStrength>k__BackingField: 25
   <DamperStrength>k__BackingField: 4

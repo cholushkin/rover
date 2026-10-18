@@ -311,7 +311,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: -377151587146011116, guid: 27a19662a35681f41843513b04712dee, type: 3}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -608,10 +608,21 @@ Rigidbody:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 970162851}
-  serializedVersion: 2
+  serializedVersion: 5
   m_Mass: 20
-  m_Drag: 0
-  m_AngularDrag: 0.05
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 1
@@ -627,8 +638,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3da664f0573749b1a7d6c1733337121e, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   _hoverConfig: {fileID: 11400000, guid: 6a534ed978a946f1b51d4396199b5cf6, type: 2}
   _flightConfig: {fileID: 11400000, guid: 3fd4c03d430346b7a9b3442722227e29, type: 2}
   _waterConfig: {fileID: 11400000, guid: ced8dea1c090413e97a36063e4754a87, type: 2}
@@ -641,8 +652,12 @@ MonoBehaviour:
   _buoyancySamplePoints:
   - {fileID: 2000000020}
   - {fileID: 2000000022}
-  _terrainMask: 8
-  _liquidMask: 16
+  _terrainMask:
+    serializedVersion: 2
+    m_Bits: 8
+  _liquidMask:
+    serializedVersion: 2
+    m_Bits: 16
 --- !u!114 &2000000004
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -653,8 +668,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a09b6aef254d4026a77fb13ae1614922, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   _controller: {fileID: 2000000003}
 --- !u!114 &2000000005
 MonoBehaviour:
@@ -666,9 +681,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8b06daac9c554cdba2f574679d06e788, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   _controller: {fileID: 2000000003}
+  _probeRayLength: 2
 --- !u!114 &2000000006
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -679,10 +695,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06307ae26b9c496c9b2670ef46cebb29, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   _controller: {fileID: 2000000003}
   _hullRenderer: {fileID: 1068677279}
+  _hoverColor: {r: 1, g: 1, b: 1, a: 1}
+  _flightColor: {r: 0, g: 1, b: 1, a: 1}
+  _waterColor: {r: 0.2, g: 0.5, b: 1, a: 1}
+  _underWaterColor: {r: 0.05, g: 0.15, b: 0.4, a: 1}
 --- !u!1 &2000000007
 GameObject:
   m_ObjectHideFlags: 0
@@ -1060,8 +1080,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 58d8f2e2cddf41fd8d5a497466612ace, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
