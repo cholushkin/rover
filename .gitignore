@@ -23,3 +23,10 @@
 /Unity/Game/RMVVM.csproj
 /Unity/Game/VersionHistory.Editor.csproj
 /Unity/Game/VersionHistoryRuntime.csproj
+/Unity/Game/Game.sln.DotSettings.user
+/Unity/Game/VoxelTerrain.Core.Tests.csproj
+/Unity/Game/VoxelTerrain.Core.csproj
+/Unity/Game/VoxelTerrain.Modules.Tests.csproj
+/Unity/Game/VoxelTerrain.Modules.csproj
+/Unity/Game/com.alelievr.NodeGraphProcessor.Editor.csproj
+/Unity/Game/com.alelievr.NodeGraphProcessor.Runtime.csproj
