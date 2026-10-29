@@ -1,5 +1,5 @@
 #pragma kernel CSMain
-#include "Assets/Resources/Generated/TerraxelGenerated.hlsl"
+#include "Assets/Libs/Terraxel/Resources/Generated/TerraxelGenerated.hlsl"
 
 
 float4 offset;
