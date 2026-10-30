@@ -1,7 +1,7 @@
-﻿// MIT License
+// MIT License
 //
-// Copyright(c) 2020 Jordan Peck (jordan.me2@gmail.com)
-// Copyright(c) 2020 Contributors
+// Copyright(c) 2023 Jordan Peck (jordan.me2@gmail.com)
+// Copyright(c) 2023 Contributors
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
@@ -44,8 +44,8 @@
 //       ....',;:codxkO000OOxdoc:;,''',,,;;;;,''.......',,;:clodkO00000Okxolc::;,,''..',;:ldxOKXNWWWNNK0OkkkkkkkkkkkxxddooooodxxkOOOOO000
 //       ....',;;clodxkkOOOkkdolc:;,,,,,,,,'..........,;:clodxkO0KKXKK0Okxdolcc::;;,,,;;:codkO0XXNNNNXKK0OOOOOkkkkxxdoollloodxkO0KKKXXXXX
 //
-// VERSION: 1.0.1
-// https://github.com/Auburn/FastNoise
+// VERSION: 1.1.1
+// https://github.com/Auburn/FastNoiseLite
 
 using System;
 using System.Runtime.CompilerServices;
@@ -54,7 +54,7 @@ using System.Runtime.CompilerServices;
 using FNLfloat = System.Single;
 //using FNLfloat = System.Double;
 
-public struct FastNoiseLite
+public class FastNoiseLite
 {
     private const short INLINE = 256; // MethodImplOptions.AggressiveInlining;
     private const short OPTIMISE = 512; // MethodImplOptions.AggressiveOptimization;
@@ -120,82 +120,35 @@ public struct FastNoiseLite
         DefaultOpenSimplex2 
     };
 
-    private int mSeed;
-    private float mFrequency;
-    private NoiseType mNoiseType;
-    private RotationType3D mRotationType3D;
-    private TransformType3D mTransformType3D;
+    private int mSeed = 1337;
+    private float mFrequency = 0.01f;
+    private NoiseType mNoiseType = NoiseType.OpenSimplex2;
+    private RotationType3D mRotationType3D = RotationType3D.None;
+    private TransformType3D mTransformType3D = TransformType3D.DefaultOpenSimplex2;
 
-    private FractalType mFractalType;
-    private int mOctaves;
-    private float mLacunarity;
-    private float mGain;
-    private float mWeightedStrength;
-    private float mPingPongStrength;
+    private FractalType mFractalType = FractalType.None;
+    private int mOctaves = 3;
+    private float mLacunarity = 2.0f;
+    private float mGain = 0.5f;
+    private float mWeightedStrength = 0.0f;
+    private float mPingPongStrength = 2.0f;
 
-    private float mFractalBounding;
+    private float mFractalBounding = 1 / 1.75f;
 
-    private CellularDistanceFunction mCellularDistanceFunction;
-    private CellularReturnType mCellularReturnType;
-    private float mCellularJitterModifier;
+    private CellularDistanceFunction mCellularDistanceFunction = CellularDistanceFunction.EuclideanSq;
+    private CellularReturnType mCellularReturnType = CellularReturnType.Distance;
+    private float mCellularJitterModifier = 1.0f;
 
-    private DomainWarpType mDomainWarpType;
-    private TransformType3D mWarpTransformType3D;
-    private float mDomainWarpAmp;
+    private DomainWarpType mDomainWarpType = DomainWarpType.OpenSimplex2;
+    private TransformType3D mWarpTransformType3D = TransformType3D.DefaultOpenSimplex2;
+    private float mDomainWarpAmp = 1.0f;
 
     /// <summary>
     /// Create new FastNoise object with optional seed
     /// </summary>
     public FastNoiseLite(int seed = 1337)
     {
-        mSeed = seed;
-        mFrequency = 0.01f;
-        mNoiseType = NoiseType.OpenSimplex2;
-        mRotationType3D = RotationType3D.None;
-        mTransformType3D = TransformType3D.DefaultOpenSimplex2;
-
-        mFractalType = FractalType.None;
-        mOctaves = 3;
-        mLacunarity = 2.0f;
-        mGain = 0.5f;
-        mWeightedStrength = 0.0f;
-        mPingPongStrength = 2.0f;
-
-        mFractalBounding = 1 / 1.75f;
-
-        mCellularDistanceFunction = CellularDistanceFunction.EuclideanSq;
-        mCellularReturnType = CellularReturnType.Distance;
-        mCellularJitterModifier = 1.0f;
-
-        mDomainWarpType = DomainWarpType.OpenSimplex2;
-        mWarpTransformType3D = TransformType3D.DefaultOpenSimplex2;
-        mDomainWarpAmp = 1.0f;
-    }
-    public FastNoiseLite(int seed, float frequency, int octaves, float lacunarity, float gain)
-    {
-        mSeed = seed;
-        mFrequency = frequency;
-        mNoiseType = NoiseType.OpenSimplex2;
-        mRotationType3D = RotationType3D.None;
-        mTransformType3D = TransformType3D.DefaultOpenSimplex2;
-
-        mFractalType = FractalType.FBm;
-        mOctaves = octaves;
-        mLacunarity = lacunarity;
-        mGain = gain;
-        mWeightedStrength = 0.0f;
-        mPingPongStrength = 2.0f;
-
-        mFractalBounding = 1 / 1.75f;
-
-        mCellularDistanceFunction = CellularDistanceFunction.EuclideanSq;
-        mCellularReturnType = CellularReturnType.Distance;
-        mCellularJitterModifier = 1.0f;
-
-        mDomainWarpType = DomainWarpType.OpenSimplex2;
-        mWarpTransformType3D = TransformType3D.DefaultOpenSimplex2;
-        mDomainWarpAmp = 30.0f;
-        CalculateFractalBounding();
+        SetSeed(seed);
     }
 
     /// <summary>
