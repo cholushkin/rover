@@ -8,6 +8,7 @@
     "com.cysharp.zlogger": "https://github.com/Cysharp/ZLogger.git?path=src/ZLogger.Unity/Assets/ZLogger.Unity",
     "com.github-glitchenzo.nugetforunity": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
     "com.mischief.markdownviewer": "https://github.com/gwaredd/UnityMarkdownViewer.git",
+    "com.qcat.fastnoise-lite": "https://github.com/cholushkin/FastNoiseLiteUnityPackage.git",
     "com.unity.addressables": "2.9.1",
     "com.unity.ai.navigation": "2.0.12",
     "com.unity.collab-proxy": "2.12.4",
