@@ -151,6 +151,19 @@ public class FastNoiseLite
         SetSeed(seed);
     }
 
+    // Terraxel convenience constructor (not part of upstream FastNoiseLite): configures
+    // OpenSimplex2 + FBm fractal noise in one call, mirroring the HLSL fnlCreateState(seed,
+    // frequency, octaves, lacunarity, gain) used by Terraxel's generated compute shaders.
+    public FastNoiseLite(int seed, float frequency, int octaves, float lacunarity, float gain) : this(seed)
+    {
+        SetNoiseType(NoiseType.OpenSimplex2);
+        SetFractalType(FractalType.FBm);
+        SetFrequency(frequency);
+        SetFractalOctaves(octaves);
+        SetFractalLacunarity(lacunarity);
+        SetFractalGain(gain);
+    }
+
     /// <summary>
     /// Sets seed used for all noise types
     /// </summary>

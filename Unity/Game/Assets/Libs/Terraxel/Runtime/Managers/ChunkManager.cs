@@ -9,7 +9,6 @@ using Unity.Jobs;
 using UnityEngine.Rendering;
 using System;
 using System.Linq;
-using UnityEditor;
 using TMPro;
 using Unity.Profiling;
 public class ChunkManager
