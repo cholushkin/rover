@@ -5,7 +5,6 @@ Shader "Custom/Triplanar"
         _Color ("Color", Color) = (1,1,1,1)
         _SliceRange ("Slices", Range(0,16)) = 6
         _MainTextures ("Albedo Textures", 2DArray) = "white" {}
-        //_BumpMaps("Normal textures", 2DArray) = "bump" {}
         _Glossiness ("Smoothness", Range(0,1)) = 0.5
         _Metallic ("Metallic", Range(0,1)) = 0.0
         _MapScale("Tiling Scale", Float) = 1
@@ -17,100 +16,140 @@ Shader "Custom/Triplanar"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "Queue"="Geometry" }
         LOD 200
 
-        CGPROGRAM
-        // Physically based Standard lighting model, and enable shadows on all light types
-        #pragma surface surf Standard vertex:vert fullforwardshadows addshadow
-        #pragma multi_compile_instancing
-        #pragma require 2darray
-        // Use shader model 3.0 target, to get nicer looking lighting
-        #pragma target 4.0
+        HLSLINCLUDE
+        #include "TriplanarURPCommon.hlsl"
 
-        //sampler2D _MainTex;
-
-        struct Input
+        // Chunk3D vertex layout (see Chunk3D.cs `layout`):
+        //   Position(float3), Normal(float3), Tangent(float3), Color(int), TexCoord0(float)
+        // `tangentOS` is repurposed to carry an alternate ("Secondary") vertex position used
+        // for LOD-transition seam stitching, and the int `near`/COLOR channel is a bitmask of
+        // which chunk-border directions this vertex sits on. When the vertex's near-mask is a
+        // subset of the per-draw `_DirectionMask` (set via MaterialPropertyBlock in
+        // Chunk3D/BaseChunk), the neighbouring chunk is lower-LOD, so this vertex snaps to the
+        // alternate position to weld the seam.
+        struct Attributes
         {
-            float3 localCoord;
-            float3 localNormal;
-            float textureIndex;
-        };
-        struct output {
-            float4 vertex : POSITION;
-            float3 normal : NORMAL;
-            float4 tangent : TANGENT;
-            int near : COLOR;
+            float4 positionOS : POSITION;
+            float3 normalOS   : NORMAL;
+            float4 tangentOS  : TANGENT;
+            int near           : COLOR;
             float textureIndex : TEXCOORD0;
             UNITY_VERTEX_INPUT_INSTANCE_ID
         };
-        half _Glossiness;
-        half _Metallic;
-        fixed4 _Color;
-        half _MapScale;
-        half _BumpScale;
-        sampler2D _BumpMap;
-        
-        int _DirectionMask;
-        float _SliceRange;
-        float4 _WorldPos;
 
-        UNITY_DECLARE_TEX2DARRAY(_MainTextures);
-        //UNITY_DECLARE_TEX2DARRAY(_BumpMaps);
-
-        // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
-        // See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
-        /*#pragma instancing_options assumeuniformscaling
-        UNITY_INSTANCING_BUFFER_START(Props)
-        UNITY_DEFINE_INSTANCED_PROP(int, _DirectionMask);
-            // put more per-instance properties here
-        UNITY_INSTANCING_BUFFER_END(Props)*/
-
-        void vert(inout output v, out Input data)
+        float3 GetObjectPositionOS(Attributes input)
         {
-            UNITY_INITIALIZE_OUTPUT(Input, data);
-            float4 vertPos;
-            if(((v.near & _DirectionMask) == v.near)){
-                vertPos = v.tangent;
-            }else{
-                vertPos = v.vertex;
-            }
-            v.vertex = vertPos;
-            data.localCoord = (_WorldPos.xyz + vertPos.xyz);
-            data.localNormal = v.normal.xyz;
-            data.textureIndex = v.textureIndex * _SliceRange;
+            return ((input.near & _DirectionMask) == input.near) ? input.tangentOS.xyz : input.positionOS.xyz;
         }
 
-        void surf (Input IN, inout SurfaceOutputStandard o)
+        float3 GetObjectNormalOS(Attributes input)
         {
-            // Albedo comes from a texture tinted by color
-            //fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _Color;
-            // Blending factor of triplanar mapping
-            float3 bf = abs(IN.localNormal);
-            bf /= dot(bf, (float3)1);
-        
-            // Triplanar mapping
-            float2 tx = IN.localCoord.yz * _MapScale;
-            float2 ty = IN.localCoord.zx * _MapScale;
-            float2 tz = IN.localCoord.xy * _MapScale;
-
-            // Base color
-            half4 cx = UNITY_SAMPLE_TEX2DARRAY(_MainTextures, float3(tx, IN.textureIndex)) * bf.x;
-            half4 cy = UNITY_SAMPLE_TEX2DARRAY(_MainTextures, float3(ty, IN.textureIndex)) * bf.y;
-            half4 cz = UNITY_SAMPLE_TEX2DARRAY(_MainTextures, float3(tz, IN.textureIndex)) * bf.z;
-            half4 color = (cx + cy + cz) * _Color;
-            o.Albedo = color.rgb;
-            //o.Alpha = color.a;
-            // Metallic and smoothness come from slider variables
-            o.Metallic = _Metallic;
-            o.Smoothness = _Glossiness;
-            // Normal map
-            half4 nx = tex2D(_BumpMap, tx) * bf.x;
-            half4 ny = tex2D(_BumpMap, ty) * bf.y;
-            half4 nz = tex2D(_BumpMap, tz) * bf.z;
-            o.Normal = UnpackScaleNormal(nx + ny + nz, _BumpScale);
+            return input.normalOS;
         }
-        ENDCG
+
+        float GetObjectTextureIndex(Attributes input)
+        {
+            return input.textureIndex;
+        }
+
+        #include "TriplanarURP.hlsl"
+        ENDHLSL
+
+        Pass
+        {
+            Name "ForwardLit"
+            Tags { "LightMode"="UniversalForward" }
+
+            ZWrite On
+            Cull Back
+
+            HLSLPROGRAM
+            #pragma target 4.5
+            #pragma require 2darray
+
+            #pragma vertex TriplanarVertex
+            #pragma fragment TriplanarForwardFragment
+
+            #pragma multi_compile_instancing
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BOX_PROJECTION
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_ATLAS
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
+            #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
+            #pragma multi_compile_fragment _ _LIGHT_COOKIES
+            #pragma multi_compile _ _LIGHT_LAYERS
+            #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
+            #pragma multi_compile_fog
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode"="ShadowCaster" }
+
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
+            Cull Back
+
+            HLSLPROGRAM
+            #pragma target 4.5
+            #pragma require 2darray
+
+            #pragma vertex TriplanarShadowVertex
+            #pragma fragment TriplanarShadowFragment
+
+            #pragma multi_compile_instancing
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "DepthOnly"
+            Tags { "LightMode"="DepthOnly" }
+
+            ZWrite On
+            ColorMask R
+            Cull Back
+
+            HLSLPROGRAM
+            #pragma target 4.5
+            #pragma require 2darray
+
+            #pragma vertex TriplanarDepthOnlyVertex
+            #pragma fragment TriplanarDepthOnlyFragment
+
+            #pragma multi_compile_instancing
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "DepthNormals"
+            Tags { "LightMode"="DepthNormals" }
+
+            ZWrite On
+            Cull Back
+
+            HLSLPROGRAM
+            #pragma target 4.5
+            #pragma require 2darray
+
+            #pragma vertex TriplanarDepthNormalsVertex
+            #pragma fragment TriplanarDepthNormalsFragment
+
+            #pragma multi_compile_instancing
+            #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
+            ENDHLSL
+        }
     }
-    FallBack "Diffuse"
+    FallBack Off
 }
